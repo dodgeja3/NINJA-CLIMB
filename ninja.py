@@ -1,4 +1,4 @@
-# Gundam
+# NINJA CLIMB
 
 import pygame, sys
 from pygame.locals import *
@@ -16,17 +16,14 @@ RED       = (255,   0,   0)
 GREEN     = (  0, 255,   0)
 BGCOLOR = BLACK
 
-UP = 'up'
-DOWN = 'down'
-LEFT = 'left'
-RIGHT = 'right'
+
 
 MAXHEALTH = 3
 
 HEAD = 0 # syntactic sugar: index of the worm's head
 
 def main():
-		global FPSCLOCK, DISPLAYSURF, BASICFONT, NINJA_STAND_IMG, SWORD_IMG, NINJA_ATTACK_IMG, ENEMY1_IMG, BACKGROUND_IMG, ENEMIES
+		global FPSCLOCK, DISPLAYSURF, BASICFONT, NINJA_STAND_IMG, SWORD_IMG, NINJA_ATTACK_IMG, ENEMY1_IMG, BACKGROUND_IMG, ENEMIES, HEART_IMG
 
 		pygame.init()
 		FPSCLOCK = pygame.time.Clock()
@@ -34,19 +31,20 @@ def main():
 		BASICFONT = pygame.font.Font('freesansbold.ttf', 18)
 		pygame.display.set_caption('NINJA')
 		
-		BACKGROUND_IMG = pygame.image.load('truebackground.png')
-		NINJA_STAND_IMG = pygame.image.load('standing_ninja.png')
-		SWORD_IMG = pygame.image.load('sword.png')
-		NINJA_ATTACK_IMG = pygame.image.load('attacking_ninja.png')
-		ENEMY1_IMG = pygame.image.load('enemy1.png')
+		BACKGROUND_IMG = pygame.image.load('sprites/background.png')
+		NINJA_STAND_IMG = pygame.image.load('sprites/standing_ninja.png')
+		SWORD_IMG = pygame.image.load('sprites/sword.png')
+		NINJA_ATTACK_IMG = pygame.image.load('sprites/attacking_ninja.png')
+		ENEMY1_IMG = pygame.image.load('sprites/enemy1.png')
+		HEART_IMG = pygame.image.load('sprites/heart.png')
 
 		ENEMIES = []
 
-			
 		while True:
 			runGame()
 
 def runGame():
+	global ENEMIES
 	startx = 0
 	starty = 800
 	init_jump_v = 95
@@ -60,6 +58,12 @@ def runGame():
 	fall = False
 
 	SWORD_TIMER = 0
+
+	SCORECOUNTER = 0
+
+	INVUL_TIMER = 0
+
+	enemySpawnRate = 95
 
 
 	playerObj = {'texture': NINJA_STAND_IMG,
@@ -75,15 +79,7 @@ def runGame():
 							'y': 0}
 
 	spawnEnemy()
-	#enemies = []
-	#random.seed()
-	#for x in range(10):
-	#	enemyObj = {'texture': ENEMY1_IMG,
-	#							'x': random.randrange(0, WINDOWWIDTH - ENEMY1_IMG.get_width()),
-	#							'y': 0,
-	#							'moveRate': 20,
-	#							'status': 'alive'}
-	#	enemies.append(enemyObj)
+
 	while True:
 		background_rect = pygame.Rect( (0, 
 																	  0,
@@ -139,7 +135,10 @@ def runGame():
 		if jump == True:
 			F = ( 0.5 * (jump_v) )
 		
-			playerObj['y'] -= F
+			if (playerObj['y'] - F > 0):
+				playerObj['y'] -= F
+			else:
+				playerObj['y'] = 0
 			jump_v -= 5
 			
 			if ( (playerObj['x'] <= 0 or playerObj['x'] + playerObj['width'] >= WINDOWWIDTH ) and (moveRight == True or moveLeft == True) ):
@@ -195,33 +194,78 @@ def runGame():
 			DISPLAYSURF.blit(swordObj['texture'],swordObj_rect)
 		
 
-		enemySpawn = random.randrange(0, 120)
-		print enemySpawn
-		if (enemySpawn > 60):
+		spawnCheck = random.randrange(0, 100)
+		if (spawnCheck > enemySpawnRate):
 			spawnEnemy()
 
+		TEMP_ENEMIES = list(ENEMIES)
 		for enemynum in range(len(ENEMIES)):
 				enemyObj_rect = pygame.Rect( (ENEMIES[enemynum]['x'],
 																			ENEMIES[enemynum]['y'],
 																			ENEMIES[enemynum]['texture'].get_width(),
 																			ENEMIES[enemynum]['texture'].get_height()) )
-				ENEMIES[enemynum]['y'] += ENEMIES[enemynum]['moveRate']
-				DISPLAYSURF.blit(ENEMIES[enemynum]['texture'],enemyObj_rect)	
+				if (enemyObj_rect.colliderect(swordObj_rect) != True):
+					ENEMIES[enemynum]['y'] += ENEMIES[enemynum]['moveRate']
+					DISPLAYSURF.blit(ENEMIES[enemynum]['texture'],enemyObj_rect)	
+				else:
+					del TEMP_ENEMIES[enemynum]
+					SCORECOUNTER += 100
 
+				if (enemyObj_rect.colliderect(playerObj_rect) == True and INVUL_TIMER == 0):
+					playerObj['health'] -= 1
+					INVUL_TIMER = 20
+				if (playerObj['health'] == 0):
+					endGame()
 
+		ENEMIES = list(TEMP_ENEMIES)
+
+		endOfScreenCheck(playerObj)
+
+		if (INVUL_TIMER > 0):
+			INVUL_TIMER -= 1
+
+		for lives in range(playerObj['health']):
+			lives += 1
+			DISPLAYSURF.blit(HEART_IMG, (WINDOWWIDTH - lives * HEART_IMG.get_width(), 10))
+		screenscore = BASICFONT.render(str(SCORECOUNTER), 1, (255,255,0))
+		DISPLAYSURF.blit(screenscore, (10, 10))
 		pygame.display.update()
 		FPSCLOCK.tick(FPS)
 		
 
-#def drawObjects(swordObj_rect, swordObj, playerObj, playerObj_rect):
 def spawnEnemy():
 	global ENEMIES
 	enemyObj = {'texture': ENEMY1_IMG,
 							'x': random.randrange(0, WINDOWWIDTH - ENEMY1_IMG.get_width()),
 							'y': 0,
-							'moveRate': 20,
+							'moveRate': 5,
 							'status': 'alive'}
 	ENEMIES.append(enemyObj)
+
+
+def endOfScreenCheck(playerObj):
+	global ENEMIES
+	if (playerObj['y'] > WINDOWHEIGHT):
+		endGame()
+
+	TEMP_ENEMIES = list(ENEMIES)
+	for enemynum in range(len(ENEMIES)):
+		if (ENEMIES[enemynum]['y'] > WINDOWHEIGHT):
+			del TEMP_ENEMIES[enemynum]
+	ENEMIES = list(TEMP_ENEMIES)
+
+
+def endGame():
+	endgametext = BASICFONT.render("GAME OVER", 1, (255,0,0))
+	DISPLAYSURF.blit(endgametext, (300, 500) )
+	pygame.display.update()
+	while True:
+		for event in pygame.event.get():
+				if event.type == QUIT:
+					terminate()
+				elif event.type == KEYDOWN:
+					if (event.key == K_q):
+						terminate()
 
 
 def terminate():

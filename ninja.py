@@ -1,4 +1,4 @@
-# Gundam
+#!/usr/bin/python
 
 import pygame, sys
 from pygame.locals import *
@@ -26,7 +26,7 @@ MAXHEALTH = 3
 HEAD = 0 # syntactic sugar: index of the worm's head
 
 def main():
-		global FPSCLOCK, DISPLAYSURF, BASICFONT, NINJA_STAND_IMG, SWORD_IMG, NINJA_ATTACK_IMG, ENEMY1_IMG, BACKGROUND_IMG, ENEMIES
+		global FPSCLOCK, DISPLAYSURF, BASICFONT, NINJA_STAND_IMG, SWORD_IMG, NINJA_ATTACK_IMG, ENEMY1_IMG, BACKGROUND_IMG, ENEMIES, POINTS, HEALTH
 
 		pygame.init()
 		FPSCLOCK = pygame.time.Clock()
@@ -41,7 +41,8 @@ def main():
 		ENEMY1_IMG = pygame.image.load('enemy1.png')
 
 		ENEMIES = []
-
+		POINTS = 0
+		HEALTH = 3
 			
 		while True:
 			runGame()
@@ -196,18 +197,18 @@ def runGame():
 		
 
 		enemySpawn = random.randrange(0, 120)
-		print enemySpawn
-		if (enemySpawn > 60):
+		if (enemySpawn > 100):
 			spawnEnemy()
 
-		for enemynum in range(len(ENEMIES)):
-				enemyObj_rect = pygame.Rect( (ENEMIES[enemynum]['x'],
-																			ENEMIES[enemynum]['y'],
-																			ENEMIES[enemynum]['texture'].get_width(),
-																			ENEMIES[enemynum]['texture'].get_height()) )
-				ENEMIES[enemynum]['y'] += ENEMIES[enemynum]['moveRate']
-				DISPLAYSURF.blit(ENEMIES[enemynum]['texture'],enemyObj_rect)	
+		collisionDetect(playerObj,swordObj_rect)
 
+		endOfScreen(playerObj)
+		
+		drawEnemies()
+		
+		pointsFont = pygame.font.SysFont("umpush", 30, bold=True)
+		pointsLabel = pointsFont.render(str(POINTS), 3, (255,255,0))
+		DISPLAYSURF.blit(pointsLabel, (75, 25))
 
 		pygame.display.update()
 		FPSCLOCK.tick(FPS)
@@ -223,6 +224,44 @@ def spawnEnemy():
 							'status': 'alive'}
 	ENEMIES.append(enemyObj)
 
+
+def collisionDetect(playerObj,swordObj_rect):
+	global ENEMIES, POINTS, HEALTH
+	for enemy in ENEMIES:
+		enemyObj_rect = pygame.Rect( (enemy['x'],
+												enemy['y'],
+												enemy['texture'].get_width(),
+												enemy['texture'].get_height()) )
+		playerObj_rect = pygame.Rect( (playerObj['x'],
+												 playerObj['y'],
+												 playerObj['texture'].get_width(),
+												 playerObj['texture'].get_height()) )
+		if (swordObj_rect.colliderect(enemyObj_rect)):
+			ENEMIES.remove(enemy)
+			POINTS = POINTS + 100
+		if (playerObj_rect.colliderect(enemyObj_rect)):
+			HEALTH = HEALTH - 1;
+	print(HEALTH)
+
+
+def drawEnemies():
+	global ENEMIES
+	count = 0
+	for enemy in range(len(ENEMIES)):
+		enemyObj_rect = pygame.Rect( (ENEMIES[enemy]['x'],
+												ENEMIES[enemy]['y'],
+												ENEMIES[enemy]['texture'].get_width(),
+												ENEMIES[enemy]['texture'].get_height()) )
+		ENEMIES[enemy]['y'] += ENEMIES[enemy]['moveRate']
+		DISPLAYSURF.blit(ENEMIES[enemy]['texture'],enemyObj_rect)	
+
+def endOfScreen(playerObj):
+	global ENEMIES
+	if (playerObj['y'] > WINDOWHEIGHT):
+		terminate()
+	for enemy in ENEMIES:
+		if (enemy['y'] > WINDOWHEIGHT):
+			ENEMIES.remove(enemy)
 
 def terminate():
 	pygame.quit()

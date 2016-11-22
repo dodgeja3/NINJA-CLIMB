@@ -42,7 +42,7 @@ def main():
 
 		ENEMIES = []
 		POINTS = 0
-		HEALTH = 3
+		HEALTH = MAXHEALTH
 			
 		while True:
 			runGame()
